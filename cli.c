@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <yapc.h>
-#include <helpers.h>
+#include <cli.h>
+#include <util.h>
 
 static pa_mainloop_api* mainloop_api = NULL;
 
@@ -58,8 +58,8 @@ static user_input* pass_options(int argc, char *argv[]) {
 
 static pa_proplist* create_proplist(void) {
     pa_proplist *proplist = pa_proplist_new();
-    pa_proplist_sets(proplist, "application.name", "yapc");
-    pa_proplist_sets(proplist, "application.id", "xyz.carcara.yapc");
+    pa_proplist_sets(proplist, "application.name", "cli");
+    pa_proplist_sets(proplist, "application.id", "xyz.carcara.cli");
     pa_proplist_sets(proplist, "application.version", "0.0.1");
     pa_proplist_sets(proplist, "application_icon_name", "audio-card");
 
