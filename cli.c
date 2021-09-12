@@ -277,19 +277,16 @@ static pa_operation* adjust_source_volume(pa_context *ctx, const pa_source_info 
 }
 
 static pa_cvolume* calculate_volume(const pa_cvolume *volume, int percentage) {
-    float current_percentage = pa_cvolume_max(volume) *100.0 / PA_VOLUME_NORM;
+    float current_percentage = pa_cvolume_max(volume) * 100.0 / PA_VOLUME_NORM;
 
     pa_volume_t value = (current_percentage + percentage) * PA_VOLUME_NORM / 100.0;
     return pa_cvolume_scale((pa_cvolume*)volume, clamp(value, PA_VOLUME_MUTED, PA_VOLUME_NORM));
 }
 
 static void success_callback(pa_context *ctx, int success, void *userdata) {
-    int exit_code = 0;
     if (!success) {
         errorf("Failure: %s", pa_strerror(pa_context_errno(ctx)));
-        exit_code = 1;
     }
 
     clean(ctx, userdata);
-    exit(exit_code);
 }
