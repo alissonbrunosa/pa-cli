@@ -62,7 +62,11 @@ static user_data *pass_options(int argc, char *argv[]) {
     } else if (streql(argv[1], "source")) {
         device = SOURCE;
 
+    } else if (streql(argv[1], "help")) {
+        print_help();
+        exit(0);
     } else {
+        errorf("%s is not a valid device\n", argv[1]);
         print_help();
         exit(1);
     }
@@ -148,8 +152,8 @@ static void process_action(pa_context *ctx, void *userdata) {
             o = pa_context_get_server_info(ctx, get_server_info_callback, data);
             break;
         default:
-            clean(ctx, data);
             errorf("Unkown action\n");
+            clean(ctx, data);
 
         }
         break;
@@ -163,8 +167,8 @@ static void process_action(pa_context *ctx, void *userdata) {
             o = pa_context_get_server_info(ctx, get_server_info_callback, data);
             break;
         default:
-            clean(ctx, data);
             errorf("Unkown action\n");
+            clean(ctx, data);
         }
         break;
     default:
@@ -223,7 +227,9 @@ static void sink_info_callback(pa_context *ctx, const pa_sink_info *info, int do
         o = adjust_sink_volume(ctx, info, data);
         break;
     default:
-        printf("WHAT DO DO?\n");
+        errorf("Unkown action\n");
+        clean(ctx, data);
+        exit(1);
     }
 
     pa_operation_unref(o);
@@ -250,7 +256,9 @@ static void source_info_callback(pa_context *ctx, const pa_source_info *info, in
         o = adjust_source_volume(ctx, info, data);
         break;
     default:
-        printf("WHAT DO DO?\n");
+        errorf("Unkown action\n");
+        clean(ctx, data);
+        exit(1);
     }
 
     pa_operation_unref(o);

@@ -8,10 +8,17 @@
 #define streql(a,b) (!strcmp((a),(b)))
 
 void print_help() {
-    printf("yapc [device] [action] [option]\n");
+    printf("pa-cli [device] [action] [value]\n");
     printf("Examples:\n");
-    printf("\tyapc sink list\n");
-    printf("\tyapc sink list detailed\n");
+    printf("\tpa-cli sink mute\n");
+    printf("\tpa-cli sink list\n");
+    printf("\tpa-cli sink adjust-volume 10\n");
+    printf("\tpa-cli sink adjust-volume -10\n");
+    printf("\n");
+    printf("\tpa-cli source mute\n");
+    printf("\tpa-cli source list\n");
+    printf("\tpa-cli source adjust-volume 10\n");
+    printf("\tpa-cli source adjust-volume -10\n");
 }
 
 void errorf(const char *format, ...) {
