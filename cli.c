@@ -41,12 +41,13 @@ static void context_state_callback(pa_context *ctx, void *userdata) {
     case PA_CONTEXT_READY:
         process_action(ctx, userdata);
         break;
-    case PA_CONTEXT_FAILED:
-        printf("Carai\n");
-        break;
     case PA_CONTEXT_TERMINATED:
         exit(0);
+        break;
+    case PA_CONTEXT_FAILED:
     default:
+        errorf("Could not connect: %s", pa_strerror(pa_context_errno(ctx)));
+        clean(ctx, userdata);
         return;
     }
 }
@@ -172,7 +173,8 @@ static void process_action(pa_context *ctx, void *userdata) {
         }
         break;
     default:
-        printf("Ai nao\n");
+        errorf("Unkown device\n");
+        clean(ctx, data);
     }
 
     if (o) {
