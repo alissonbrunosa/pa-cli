@@ -305,9 +305,8 @@ static pa_cvolume* calculate_volume(const pa_cvolume *volume, int percentage) {
 }
 
 static void success_callback(pa_context *ctx, int success, void *userdata) {
-    if (!success) {
+    if (!success)
         errorf("Failure: %s", pa_strerror(pa_context_errno(ctx)));
-    }
 
     clean(ctx, userdata);
 }
