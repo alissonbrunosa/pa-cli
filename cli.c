@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) { if (argc == 1) {
         return 1;
     }
 
-    user_data *data = pass_options(argc, argv);
+    user_data *data = parse_options(argc, argv);
 
     pa_proplist *proplist = create_proplist();
     pa_mainloop *mainloop = pa_mainloop_new();
@@ -52,10 +52,11 @@ static void context_state_callback(pa_context *ctx, void *userdata) {
     }
 }
 
-static user_data *pass_options(int argc, char *argv[]) {
+static user_data *parse_options(int argc, char *argv[]) {
     device_value device = NONE;
     action_value action = NONE;
     int volume_pecertage;
+    char *device_name;
 
     if (streql(argv[1], "sink")) {
         device = SINK;
@@ -89,6 +90,16 @@ static user_data *pass_options(int argc, char *argv[]) {
                 errorf("%s is not a valid argument\n", argv[3]);
                 exit(1);
             }
+        } else if (streql(argv[2], "set-default")) {
+            action = SET_DEFAULT;
+
+            if (argc != 4) {
+                errorf("set-default takes 1 argument\n", argv[3]);
+                exit(1);
+            }
+
+
+           device_name = strcopy(argv[3]);
         } else if (streql(argv[2], "mute")) {
             action = MUTE;
 
@@ -98,6 +109,7 @@ static user_data *pass_options(int argc, char *argv[]) {
     user_data *data = malloc(sizeof(user_data));
     data->device = device;
     data->action = action;
+    data->device_name = device_name;
     data->volume_pecertage = volume_pecertage;
     return data;
 }
@@ -113,6 +125,9 @@ static pa_proplist *create_proplist(void) {
 }
 
 static void clean(pa_context *ctx, user_data *userdata) {
+    if (userdata->device_name != NULL)
+        free(userdata->device_name);
+
     free(userdata);
     pa_context_disconnect(ctx);
     pa_context_unref(ctx);
@@ -126,7 +141,7 @@ static void list_sinks_callback(pa_context *ctx,
         return;
     }
 
-    printf("%d %s\n", info->index, info->description);
+    printf("%-5d\t%-90s\t%s\n", info->index, info->name, info->description);
 }
 
 static void list_sources_callback(pa_context *ctx, const pa_source_info *info, int done, void *userdata) {
@@ -135,7 +150,7 @@ static void list_sources_callback(pa_context *ctx, const pa_source_info *info, i
         return;
     }
 
-    printf("%d %s\n", info->index, info->description);
+    printf("%-5d\t%-90s\t%s\n", info->index, info->name, info->description);
 }
 
 static void process_action(pa_context *ctx, void *userdata) {
@@ -148,6 +163,9 @@ static void process_action(pa_context *ctx, void *userdata) {
         case LIST:
             o = pa_context_get_sink_info_list(ctx, list_sinks_callback, data);
             break;
+        case SET_DEFAULT:
+            o = pa_context_set_default_sink(ctx, data->device_name, success_callback, data);
+            break;
         case MUTE:
         case ADJUST_VOLUME:
             o = pa_context_get_server_info(ctx, get_server_info_callback, data);
@@ -155,13 +173,15 @@ static void process_action(pa_context *ctx, void *userdata) {
         default:
             errorf("Unkown action\n");
             clean(ctx, data);
-
         }
         break;
     case SOURCE:
         switch (data->action) {
         case LIST:
             o = pa_context_get_source_info_list(ctx, list_sources_callback, data);
+            break;
+        case SET_DEFAULT:
+            o = pa_context_set_default_source(ctx, data->device_name, success_callback, data);
             break;
         case MUTE:
         case ADJUST_VOLUME:
@@ -203,7 +223,6 @@ static void get_server_info_callback(pa_context *ctx, const pa_server_info *info
             errorf("Unkown device\n");
             clean(ctx, data);
             exit(1);
-
     }
 
     pa_operation_unref(o);

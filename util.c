@@ -10,15 +10,11 @@
 void print_help() {
     printf("pa-cli [device] [action] [value]\n");
     printf("Examples:\n");
-    printf("\tpa-cli sink mute\n");
-    printf("\tpa-cli sink list\n");
-    printf("\tpa-cli sink adjust-volume 10\n");
-    printf("\tpa-cli sink adjust-volume -10\n");
-    printf("\n");
-    printf("\tpa-cli source mute\n");
-    printf("\tpa-cli source list\n");
-    printf("\tpa-cli source adjust-volume 10\n");
-    printf("\tpa-cli source adjust-volume -10\n");
+    printf("\tpa-cli [sink | source] mute\n");
+    printf("\tpa-cli [sink | source] list\n");
+    printf("\tpa-cli [sink | source] adjust-volume 10\n");
+    printf("\tpa-cli [sink | source] adjust-volume -10\n");
+    printf("\tpa-cli [sink | source] set-default <device_name>\n");
 }
 
 void errorf(const char *format, ...) {

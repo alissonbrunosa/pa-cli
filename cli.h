@@ -11,16 +11,18 @@ typedef enum {
     MUTE = 1,
     LIST,
     ADJUST_VOLUME,
+    SET_DEFAULT,
 } action_value;
 
 typedef struct {
     int volume_pecertage;
     device_value device;
     action_value action;
+    char *device_name;
 } user_data;
 
 
-static user_data* pass_options(int argc, char *argv[]);
+static user_data* parse_options(int argc, char *argv[]);
 
 static pa_proplist* create_proplist(void);
 
