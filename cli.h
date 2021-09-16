@@ -5,19 +5,19 @@
 typedef enum {
     SINK = 1,
     SOURCE,
-} device_value;
+} device_t;
 
 typedef enum {
     MUTE = 1,
     LIST,
     ADJUST_VOLUME,
     SET_DEFAULT,
-} action_value;
+} action_t;
 
 typedef struct {
     int volume_pecertage;
-    device_value device;
-    action_value action;
+    device_t device;
+    action_t action;
     char *device_name;
 } user_data;
 

@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) { if (argc == 1) {
     pa_context_connect(context, NULL, 0, NULL);
 
     int ret = 1;
-    if (pa_mainloop_run(mainloop, & ret) < 0) {
+    if (pa_mainloop_run(mainloop, &ret) < 0) {
         errorf("Failed to start mainloop.");
         return ret;
     }
@@ -53,8 +53,8 @@ static void context_state_callback(pa_context *ctx, void *userdata) {
 }
 
 static user_data *parse_options(int argc, char *argv[]) {
-    device_value device = NONE;
-    action_value action = NONE;
+    device_t device = NONE;
+    action_t action = NONE;
     int volume_pecertage;
     char *device_name;
 
