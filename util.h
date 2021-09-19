@@ -9,3 +9,5 @@ void errorf(const char *format, ...);
 char* strcopy(const char *src);
 
 int clamp(int value, int min, int max);
+
+const char *strnull(const char *str);

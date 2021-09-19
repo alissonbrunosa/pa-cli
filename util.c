@@ -36,3 +36,7 @@ char* strcopy(const char *src) {
 int clamp(int value, int min, int max) {
     return (value > max) ? max : ((value < min ? min : value));
 }
+
+const char *strnull(const char *str) {
+    return str ? str : "(null)";
+}

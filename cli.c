@@ -1,11 +1,14 @@
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
+
 #include <cli.h>
 #include <util.h>
 
 static pa_mainloop_api *mainloop_api = NULL;
 
-int main(int argc, char *argv[]) { if (argc == 1) {
+int main(int argc, char *argv[]) {
+    if (argc == 1) {
         errorf("No command specified\n");
         print_help();
         return 1;
@@ -47,7 +50,7 @@ static void context_state_callback(pa_context *ctx, void *userdata) {
     case PA_CONTEXT_FAILED:
     default:
         errorf("Could not connect: %s", pa_strerror(pa_context_errno(ctx)));
-        clean(ctx, userdata);
+        drain_context(ctx, userdata);
         return;
     }
 }
@@ -61,16 +64,15 @@ static user_data *parse_options(int argc, char *argv[]) {
     if (streql(argv[1], "sink")) {
         device = SINK;
 
+    } else if (streql(argv[1], "sink-input")) {
+        device = SINK_INPUT;
+
     } else if (streql(argv[1], "source")) {
         device = SOURCE;
 
     } else if (streql(argv[1], "help")) {
         print_help();
         exit(0);
-    } else {
-        errorf("%s is not a valid device\n", argv[1]);
-        print_help();
-        exit(1);
     }
 
     if (argc >= 3) {
@@ -134,10 +136,9 @@ static void clean(pa_context *ctx, user_data *userdata) {
     mainloop_api->quit(mainloop_api, 0);
 }
 
-static void list_sinks_callback(pa_context *ctx,
-    const pa_sink_info *info, int done, void *userdata) {
+static void list_sinks_callback(pa_context *ctx, const pa_sink_info *info, int done, void *userdata) {
     if (done) {
-        clean(ctx, userdata);
+        drain_context(ctx, userdata);
         return;
     }
 
@@ -146,7 +147,7 @@ static void list_sinks_callback(pa_context *ctx,
 
 static void list_sources_callback(pa_context *ctx, const pa_source_info *info, int done, void *userdata) {
     if (done) {
-        clean(ctx, userdata);
+        drain_context(ctx, userdata);
         return;
     }
 
@@ -171,8 +172,8 @@ static void process_action(pa_context *ctx, void *userdata) {
             o = pa_context_get_server_info(ctx, get_server_info_callback, data);
             break;
         default:
-            errorf("Unkown action\n");
-            clean(ctx, data);
+            errorf("Unkown action sink\n");
+            drain_context(ctx, data);
         }
         break;
     case SOURCE:
@@ -188,19 +189,29 @@ static void process_action(pa_context *ctx, void *userdata) {
             o = pa_context_get_server_info(ctx, get_server_info_callback, data);
             break;
         default:
-            errorf("Unkown action\n");
-            clean(ctx, data);
+            errorf("Action not supported for source\n");
+            drain_context(ctx, data);
+        }
+        break;
+    case SINK_INPUT:
+        switch (data->action) {
+        case LIST:
+            o = pa_context_get_sink_input_info_list(ctx, list_sink_inputs_callback, data);
+            break;
+        case MOVE:
+            break;
+        default:
+            errorf("Action not supported for sink-input\n");
+            drain_context(ctx, data);
         }
         break;
     default:
-        errorf("Unkown device\n");
-        clean(ctx, data);
+        o = pa_context_get_server_info(ctx, print_server_info_call_callback, data);
     }
 
-    if (o) {
-        pa_operation_unref(o);
-    }
+    pa_operation_unref(o);
 }
+
 
 static void get_server_info_callback(pa_context *ctx, const pa_server_info *info, void *userdata) {
     pa_operation *o;
@@ -208,7 +219,7 @@ static void get_server_info_callback(pa_context *ctx, const pa_server_info *info
 
     if (!info) {
         errorf("Failed to get server info: %s\n", pa_strerror(pa_context_errno(ctx)));
-        clean(ctx, userdata);
+        drain_context(ctx, userdata);
         exit(1);
     }
 
@@ -221,7 +232,7 @@ static void get_server_info_callback(pa_context *ctx, const pa_server_info *info
             break;
         default:
             errorf("Unkown device\n");
-            clean(ctx, data);
+            drain_context(ctx, userdata);
             exit(1);
     }
 
@@ -231,7 +242,7 @@ static void get_server_info_callback(pa_context *ctx, const pa_server_info *info
 static void sink_info_callback(pa_context *ctx, const pa_sink_info *info, int done, void *userdata) {
     if (done < 0) {
         errorf("Failed to get sink information: %s", pa_strerror(pa_context_errno(ctx)));
-        clean(ctx, userdata);
+        drain_context(ctx, userdata);
         exit(1);
     }
 
@@ -249,7 +260,7 @@ static void sink_info_callback(pa_context *ctx, const pa_sink_info *info, int do
         break;
     default:
         errorf("Unkown action\n");
-        clean(ctx, data);
+        drain_context(ctx, userdata);
         exit(1);
     }
 
@@ -262,7 +273,7 @@ static void source_info_callback(pa_context *ctx, const pa_source_info *info, in
 
     if (done < 0) {
         errorf("Failed to get source information: %s", pa_strerror(pa_context_errno(ctx)));
-        clean(ctx, userdata);
+        drain_context(ctx, userdata);
         exit(1);
     }
 
@@ -278,7 +289,7 @@ static void source_info_callback(pa_context *ctx, const pa_source_info *info, in
         break;
     default:
         errorf("Unkown action\n");
-        clean(ctx, data);
+        drain_context(ctx, userdata);
         exit(1);
     }
 
@@ -308,5 +319,65 @@ static void success_callback(pa_context *ctx, int success, void *userdata) {
     if (!success)
         errorf("Failure: %s", pa_strerror(pa_context_errno(ctx)));
 
+    drain_context(ctx, userdata);
+}
+
+static void list_sink_inputs_callback(pa_context *ctx, const pa_sink_input_info *info, int done, void *userdata) {
+    if (done) {
+        drain_context(ctx, userdata);
+        return;
+    }
+
+    printf("%-5d\t%s\n", info->index, info->name);
+}
+
+static void print_server_info_call_callback(pa_context *ctx, const pa_server_info *info, void *userdata) {
+    pa_operation_unref(pa_context_get_sink_info_by_name(ctx, info->default_sink_name, pretty_print_sink_callback, userdata));
+    pa_operation_unref(pa_context_get_source_info_by_name(ctx, info->default_source_name, pretty_print_source_callback, userdata));
+}
+
+static void pretty_print_sink_callback(pa_context *ctx, const pa_sink_info *info, int done, void *userdata) {
+    if (done < 0) {
+        errorf("Failed to get sink information: %s", pa_strerror(pa_context_errno(ctx)));
+        drain_context(ctx, userdata);
+        exit(1);
+    }
+
+    if (done) {
+        drain_context(ctx, userdata);
+        return;
+    }
+
+    float volume = pa_cvolume_max(&info->volume) * 100.0 / PA_VOLUME_NORM;
+    printf("Sink #%u\n\tName: %s\n\tDescription: %s\n\tDriver: %s\n\tVolume: %g%%\n", info->index, info->name, strnull(info->description), strnull(info->driver), roundf(volume));
+}
+
+static void pretty_print_source_callback(pa_context *ctx, const pa_source_info *info, int done, void *userdata) {
+    if (done < 0) {
+        errorf("Failed to get sink information: %s", pa_strerror(pa_context_errno(ctx)));
+        drain_context(ctx, userdata);
+        exit(1);
+    }
+
+    if (done) {
+        drain_context(ctx, userdata);
+        return;
+    }
+
+    printf("Source #%u\n\tName: %s\n\tDescription: %s\n\tDriver: %s\n\tVolume: %s\n", info->index, info->name, strnull(info->description), strnull(info->driver), "100%");
+}
+
+static void context_drain_complete_callback(pa_context *ctx, void *userdata) {
     clean(ctx, userdata);
 }
+
+static void drain_context(pa_context *ctx, void *userdata) {
+    pa_operation *op = pa_context_drain(ctx, context_drain_complete_callback, userdata);
+
+    if (!op)
+        clean(ctx, userdata);
+    else
+        pa_operation_unref(op);
+}
+
+

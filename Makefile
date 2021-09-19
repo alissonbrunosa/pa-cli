@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -I. -Wall
 
-LIBS = -lpulse
+LIBS = -lpulse -lm
 
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)

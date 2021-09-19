@@ -4,6 +4,7 @@
 
 typedef enum {
     SINK = 1,
+    SINK_INPUT,
     SOURCE,
 } device_t;
 
@@ -40,6 +41,8 @@ static void source_info_callback(pa_context *ctx, const pa_source_info *info, in
 
 static void list_sinks_callback(pa_context *ctx, const pa_sink_info *info, int done, void *userdata);
 
+static void list_sink_inputs_callback(pa_context *ctx, const pa_sink_input_info *info, int done, void *userdata);
+
 static void list_sources_callback(pa_context *ctx, const pa_source_info *info, int done, void *userdata);
 
 static void process_action(pa_context *ctx, void *userdata);
@@ -49,3 +52,13 @@ static void context_state_callback(pa_context *ctx, void *userdata);
 static void get_server_info_callback(pa_context *ctx, const pa_server_info *info, void *userdata);
 
 static pa_cvolume* calculate_volume(const pa_cvolume *volume, int percentage);
+
+static void print_server_info_call_callback(pa_context *ctx, const pa_server_info *info, void *userdata);
+
+static void pretty_print_sink_callback(pa_context *ctx, const pa_sink_info *info, int done, void *userdata);
+
+static void pretty_print_source_callback(pa_context *ctx, const pa_source_info *info, int done, void *userdata);
+
+static void context_drain_complete_callback(pa_context *ctx, void *userdata);
+
+static void drain_context(pa_context *ctx, void *userdata);
