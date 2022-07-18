@@ -11,6 +11,7 @@ typedef enum {
 typedef enum {
     MUTE = 1,
     LIST,
+    MOVE,
     ADJUST_VOLUME,
     SET_DEFAULT,
 } action_t;

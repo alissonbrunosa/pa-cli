@@ -127,10 +127,11 @@ static pa_proplist *create_proplist(void) {
 }
 
 static void clean(pa_context *ctx, user_data *userdata) {
-    if (userdata->device_name != NULL)
+    if (!userdata->device_name)
         free(userdata->device_name);
 
     free(userdata);
+
     pa_context_disconnect(ctx);
     pa_context_unref(ctx);
     mainloop_api->quit(mainloop_api, 0);
