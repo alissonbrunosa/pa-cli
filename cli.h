@@ -72,3 +72,7 @@ static void drain_context(pa_context *ctx, void *userdata);
 static void move_sink_input_callback(pa_context *ctx, const pa_sink_input_info *info, int done, void *userdata);
 
 static void default_sink_success_callback(pa_context *ctx, int success, void *userdata);
+
+static void default_source_success_callback(pa_context *ctx, int success, void *userdata);
+
+static void move_source_output_callback(pa_context *ctx, const pa_source_output_info *info, int done, void *userdata);

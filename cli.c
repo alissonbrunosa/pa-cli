@@ -187,7 +187,7 @@ static void process_action(pa_context *ctx, void *userdata) {
             o = pa_context_get_source_info_list(ctx, list_sources_callback, data);
             break;
         case SET_DEFAULT:
-            o = pa_context_set_default_source(ctx, data->device_name, success_callback, data);
+            o = pa_context_set_default_source(ctx, data->device_name, default_source_success_callback, data);
             break;
         case MUTE:
         case GET_VOLUME:
@@ -345,7 +345,7 @@ static pa_cvolume* calculate_volume(const pa_cvolume *volume, int percentage) {
 
 static void success_callback(pa_context *ctx, int success, void *userdata) {
     if (!success)
-        errorf("Failure: %s", pa_strerror(pa_context_errno(ctx)));
+        errorf("Failure: %s\n", pa_strerror(pa_context_errno(ctx)));
 
     drain_context(ctx, userdata);
 }
@@ -426,10 +426,39 @@ static void move_sink_input_callback(pa_context *ctx, const pa_sink_input_info *
 
 static void default_sink_success_callback(pa_context *ctx, int success, void *userdata) {
     if (!success) {
-        errorf("Failure: %s", pa_strerror(pa_context_errno(ctx)));
+        errorf("Failure: %s\n", pa_strerror(pa_context_errno(ctx)));
         drain_context(ctx, userdata);
         return;
     }
 
     pa_operation_unref(pa_context_get_sink_input_info_list(ctx, move_sink_input_callback, userdata));
+}
+
+static void default_source_success_callback(pa_context *ctx, int success, void *userdata) {
+    if (!success) {
+        errorf("Failure: %s\n", pa_strerror(pa_context_errno(ctx)));
+        drain_context(ctx, userdata);
+        return;
+    }
+
+    pa_operation_unref(pa_context_get_source_output_info_list(ctx, move_source_output_callback, userdata));
+}
+
+static void move_source_output_callback(pa_context *ctx, const pa_source_output_info *info, int done, void *userdata) {
+    pa_operation *o = NULL;
+
+    if (done) {
+        drain_context(ctx, userdata);
+        return;
+    }
+
+    const char *app = pa_proplist_gets(info->proplist, PA_PROP_APPLICATION_ID);
+    if (app && (strcmp(app, "org.PulseAudio.pavucontrol") == 0 || strcmp(app, "org.gnome.VolumeControl") == 0 || strcmp(app, "org.kde.kmixd") == 0))
+        return;
+
+    user_data *data = userdata;
+    o = pa_context_move_source_output_by_name(ctx, info->index, data->device_name, success_callback, data);
+    if (o) {
+        pa_operation_unref(o);
+    }
 }
