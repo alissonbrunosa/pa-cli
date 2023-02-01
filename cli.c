@@ -79,6 +79,9 @@ static user_data *parse_options(int argc, char *argv[]) {
         if (streql(argv[2], "list")) {
             action = LIST;
 
+        } else if (streql(argv[2], "get-volume")) {
+            action = GET_VOLUME;
+
         } else if (streql(argv[2], "adjust-volume")) {
             action = ADJUST_VOLUME;
 
@@ -169,6 +172,7 @@ static void process_action(pa_context *ctx, void *userdata) {
             o = pa_context_set_default_sink(ctx, data->device_name, success_callback, data);
             break;
         case MUTE:
+        case GET_VOLUME:
         case ADJUST_VOLUME:
             o = pa_context_get_server_info(ctx, get_server_info_callback, data);
             break;
@@ -186,6 +190,7 @@ static void process_action(pa_context *ctx, void *userdata) {
             o = pa_context_set_default_source(ctx, data->device_name, success_callback, data);
             break;
         case MUTE:
+        case GET_VOLUME:
         case ADJUST_VOLUME:
             o = pa_context_get_server_info(ctx, get_server_info_callback, data);
             break;
@@ -259,6 +264,11 @@ static void sink_info_callback(pa_context *ctx, const pa_sink_info *info, int do
     case ADJUST_VOLUME:
         o = adjust_sink_volume(ctx, info, data);
         break;
+    case GET_VOLUME:
+        print_sink_volume(ctx, info, data);
+        drain_context(ctx, userdata);
+
+        return;
     default:
         errorf("Unkown action\n");
         drain_context(ctx, userdata);
@@ -285,9 +295,16 @@ static void source_info_callback(pa_context *ctx, const pa_source_info *info, in
     case MUTE:
         o = pa_context_set_source_mute_by_index(ctx, info->index, !info->mute, success_callback, data);
         break;
+
     case ADJUST_VOLUME:
         o = adjust_source_volume(ctx, info, data);
         break;
+
+    case GET_VOLUME:
+        print_source_volume(ctx, info);
+        drain_context(ctx, userdata);
+        return;
+
     default:
         errorf("Unkown action\n");
         drain_context(ctx, userdata);
@@ -297,10 +314,20 @@ static void source_info_callback(pa_context *ctx, const pa_source_info *info, in
     pa_operation_unref(o);
 }
 
+static void print_sink_volume(pa_context *ctx, const pa_sink_info *info, user_data *data) {
+    int volume = pa_cvolume_max(&info->volume) * 100 / PA_VOLUME_NORM;
+    printf("%d\n", volume);
+}
+
 static pa_operation* adjust_sink_volume(pa_context *ctx, const pa_sink_info *info, user_data *data) {
     pa_cvolume *vol = calculate_volume(&info->volume, data->volume_pecertage);
 
     return pa_context_set_sink_volume_by_index(ctx, info->index, vol, success_callback, data);
+}
+
+static void print_source_volume(pa_context *ctx, const pa_source_info *info) {
+    int volume = pa_cvolume_max(&info->volume) * 100 / PA_VOLUME_NORM;
+    printf("%d\n", volume);
 }
 
 static pa_operation* adjust_source_volume(pa_context *ctx, const pa_source_info *info, user_data *data) {
@@ -365,7 +392,8 @@ static void pretty_print_source_callback(pa_context *ctx, const pa_source_info *
         return;
     }
 
-    printf("Source #%u\n\tName: %s\n\tDescription: %s\n\tDriver: %s\n\tVolume: %s\n", info->index, info->name, strnull(info->description), strnull(info->driver), "100%");
+    float volume = pa_cvolume_max(&info->volume) * 100.0 / PA_VOLUME_NORM;
+    printf("Source #%u\n\tName: %s\n\tDescription: %s\n\tDriver: %s\n\tVolume: %g%%\n", info->index, info->name, strnull(info->description), strnull(info->driver), roundf(volume));
 }
 
 static void context_drain_complete_callback(pa_context *ctx, void *userdata) {

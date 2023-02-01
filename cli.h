@@ -12,6 +12,7 @@ typedef enum {
     MUTE = 1,
     LIST,
     MOVE,
+    GET_VOLUME,
     ADJUST_VOLUME,
     SET_DEFAULT,
 } action_t;
@@ -33,6 +34,10 @@ static void clean(pa_context *ctx, user_data *input);
 static void success_callback(pa_context *ctx, int success, void *userdata);
 
 static pa_operation* adjust_sink_volume(pa_context *ctx, const pa_sink_info *info, user_data *data);
+
+static void print_sink_volume(pa_context *ctx, const pa_sink_info *info, user_data *data);
+
+static void print_source_volume(pa_context *ctx, const pa_source_info *info);
 
 static pa_operation* adjust_source_volume(pa_context *ctx, const pa_source_info *info, user_data *data);
 
