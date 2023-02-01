@@ -68,3 +68,7 @@ static void pretty_print_source_callback(pa_context *ctx, const pa_source_info *
 static void context_drain_complete_callback(pa_context *ctx, void *userdata);
 
 static void drain_context(pa_context *ctx, void *userdata);
+
+static void move_sink_input_callback(pa_context *ctx, const pa_sink_input_info *info, int done, void *userdata);
+
+static void default_sink_success_callback(pa_context *ctx, int success, void *userdata);

@@ -169,7 +169,7 @@ static void process_action(pa_context *ctx, void *userdata) {
             o = pa_context_get_sink_info_list(ctx, list_sinks_callback, data);
             break;
         case SET_DEFAULT:
-            o = pa_context_set_default_sink(ctx, data->device_name, success_callback, data);
+            o = pa_context_set_default_sink(ctx, data->device_name, default_sink_success_callback, data);
             break;
         case MUTE:
         case GET_VOLUME:
@@ -409,4 +409,27 @@ static void drain_context(pa_context *ctx, void *userdata) {
         pa_operation_unref(op);
 }
 
+static void move_sink_input_callback(pa_context *ctx, const pa_sink_input_info *info, int done, void *userdata) {
+    pa_operation *o = NULL;
 
+    if (done) {
+        drain_context(ctx, userdata);
+        return;
+    }
+
+    user_data *data = userdata;
+    o = pa_context_move_sink_input_by_name(ctx, info->index, data->device_name, success_callback, data);
+    if (o) {
+        pa_operation_unref(o);
+    }
+}
+
+static void default_sink_success_callback(pa_context *ctx, int success, void *userdata) {
+    if (!success) {
+        errorf("Failure: %s", pa_strerror(pa_context_errno(ctx)));
+        drain_context(ctx, userdata);
+        return;
+    }
+
+    pa_operation_unref(pa_context_get_sink_input_info_list(ctx, move_sink_input_callback, userdata));
+}
