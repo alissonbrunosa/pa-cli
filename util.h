@@ -4,6 +4,8 @@
 // prints help information
 void print_help();
 
+void warnf(const char *format, ...);
+
 void errorf(const char *format, ...);
 
 char* strcopy(const char *src);

@@ -12,6 +12,7 @@ typedef enum {
     MUTE = 1,
     LIST,
     MOVE,
+    IS_MUTED,
     GET_VOLUME,
     ADJUST_VOLUME,
     SET_DEFAULT,

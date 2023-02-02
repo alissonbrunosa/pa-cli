@@ -82,27 +82,37 @@ static user_data *parse_options(int argc, char *argv[]) {
         } else if (streql(argv[2], "get-volume")) {
             action = GET_VOLUME;
 
+            if (argc != 3) {
+                warnf("get-volume takes no arguments\n");
+            }
+
+        } else if (streql(argv[2], "is-muted")) {
+            action = IS_MUTED;
+
+            if (argc != 3) {
+                warnf("is-muted takes no arguments\n");
+            }
+
         } else if (streql(argv[2], "adjust-volume")) {
             action = ADJUST_VOLUME;
 
             if (argc != 4) {
-                errorf("adjust-volume takes 1 argument\n", argv[3]);
+                errorf("adjust-volume takes 1 argument\n");
                 exit(1);
             }
 
             volume_pecertage = atoi(argv[3]);
             if (!volume_pecertage) {
-                errorf("%s is not a valid argument\n", argv[3]);
+                errorf("%s is not a valid argument\n");
                 exit(1);
             }
         } else if (streql(argv[2], "set-default")) {
             action = SET_DEFAULT;
 
             if (argc != 4) {
-                errorf("set-default takes 1 argument\n", argv[3]);
+                errorf("set-default takes 1 argument\n");
                 exit(1);
             }
-
 
            device_name = strcopy(argv[3]);
         } else if (streql(argv[2], "mute")) {
@@ -172,6 +182,7 @@ static void process_action(pa_context *ctx, void *userdata) {
             o = pa_context_set_default_sink(ctx, data->device_name, default_sink_success_callback, data);
             break;
         case MUTE:
+        case IS_MUTED:
         case GET_VOLUME:
         case ADJUST_VOLUME:
             o = pa_context_get_server_info(ctx, get_server_info_callback, data);
@@ -190,6 +201,7 @@ static void process_action(pa_context *ctx, void *userdata) {
             o = pa_context_set_default_source(ctx, data->device_name, default_source_success_callback, data);
             break;
         case MUTE:
+        case IS_MUTED:
         case GET_VOLUME:
         case ADJUST_VOLUME:
             o = pa_context_get_server_info(ctx, get_server_info_callback, data);
@@ -264,11 +276,17 @@ static void sink_info_callback(pa_context *ctx, const pa_sink_info *info, int do
     case ADJUST_VOLUME:
         o = adjust_sink_volume(ctx, info, data);
         break;
+
+    case IS_MUTED:
+        printf("%d\n", info->mute);
+        drain_context(ctx, userdata);
+        return;
+
     case GET_VOLUME:
         print_sink_volume(ctx, info, data);
         drain_context(ctx, userdata);
-
         return;
+
     default:
         errorf("Unkown action\n");
         drain_context(ctx, userdata);
@@ -299,6 +317,11 @@ static void source_info_callback(pa_context *ctx, const pa_source_info *info, in
     case ADJUST_VOLUME:
         o = adjust_source_volume(ctx, info, data);
         break;
+
+    case IS_MUTED:
+	printf("%d\n", info->mute);
+        drain_context(ctx, userdata);
+        return;
 
     case GET_VOLUME:
         print_source_volume(ctx, info);

@@ -15,7 +15,18 @@ void print_help() {
     printf("\tpa-cli [sink | source] adjust-volume 10\n");
     printf("\tpa-cli [sink | source] adjust-volume -10\n");
     printf("\tpa-cli [sink | source] set-default <device_name>\n");
+    printf("\tpa-cli [sink | source] is-muted\n");
+    printf("\tpa-cli [sink | source] get-volume\n");
 }
+
+void warnf(const char *format, ...) {
+    printf("\033[0;33m");
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    printf("\033[0m");
+}
+
 
 void errorf(const char *format, ...) {
     printf("\033[0;31m");
