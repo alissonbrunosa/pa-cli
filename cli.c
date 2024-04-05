@@ -37,21 +37,21 @@ int main(int argc, char *argv[]) {
 
 static void context_state_callback(pa_context *ctx, void *userdata) {
     switch (pa_context_get_state(ctx)) {
-    case PA_CONTEXT_CONNECTING:
-    case PA_CONTEXT_AUTHORIZING:
-    case PA_CONTEXT_SETTING_NAME:
-        break;
-    case PA_CONTEXT_READY:
-        process_action(ctx, userdata);
-        break;
-    case PA_CONTEXT_TERMINATED:
-        exit(0);
-        break;
-    case PA_CONTEXT_FAILED:
-    default:
-        errorf("Could not connect: %s", pa_strerror(pa_context_errno(ctx)));
-        drain_context(ctx, userdata);
-        return;
+        case PA_CONTEXT_CONNECTING:
+        case PA_CONTEXT_AUTHORIZING:
+        case PA_CONTEXT_SETTING_NAME:
+            break;
+        case PA_CONTEXT_READY:
+            process_action(ctx, userdata);
+            break;
+        case PA_CONTEXT_TERMINATED:
+            exit(0);
+            break;
+        case PA_CONTEXT_FAILED:
+        default:
+            errorf("Could not connect: %s", pa_strerror(pa_context_errno(ctx)));
+            drain_context(ctx, userdata);
+            exit(1);
     }
 }
 
@@ -114,7 +114,7 @@ static user_data *parse_options(int argc, char *argv[]) {
                 exit(1);
             }
 
-           device_name = strcopy(argv[3]);
+            device_name = strcopy(argv[3]);
         } else if (streql(argv[2], "mute")) {
             action = MUTE;
 
@@ -173,58 +173,61 @@ static void process_action(pa_context *ctx, void *userdata) {
     user_data *data = userdata;
 
     switch (data->device) {
-    case SINK:
-        switch (data->action) {
-        case LIST:
-            o = pa_context_get_sink_info_list(ctx, list_sinks_callback, data);
+        case SINK:
+            switch (data->action) {
+                case LIST:
+                    o = pa_context_get_sink_info_list(ctx, list_sinks_callback, data);
+                    break;
+                case SET_DEFAULT:
+                    o = pa_context_set_default_sink(ctx, data->device_name, default_sink_success_callback, data);
+                    break;
+                case MUTE:
+                case IS_MUTED:
+                case GET_VOLUME:
+                case ADJUST_VOLUME:
+                    o = pa_context_get_server_info(ctx, get_server_info_callback, data);
+                    break;
+                default:
+                    errorf("Unkown action sink\n");
+                    drain_context(ctx, data);
+                    exit(2);
+            }
             break;
-        case SET_DEFAULT:
-            o = pa_context_set_default_sink(ctx, data->device_name, default_sink_success_callback, data);
+        case SOURCE:
+            switch (data->action) {
+                case LIST:
+                    o = pa_context_get_source_info_list(ctx, list_sources_callback, data);
+                    break;
+                case SET_DEFAULT:
+                    o = pa_context_set_default_source(ctx, data->device_name, default_source_success_callback, data);
+                    break;
+                case MUTE:
+                case IS_MUTED:
+                case GET_VOLUME:
+                case ADJUST_VOLUME:
+                    o = pa_context_get_server_info(ctx, get_server_info_callback, data);
+                    break;
+                default:
+                    errorf("Action not supported for source\n");
+                    drain_context(ctx, data);
+                    exit(2);
+            }
             break;
-        case MUTE:
-        case IS_MUTED:
-        case GET_VOLUME:
-        case ADJUST_VOLUME:
-            o = pa_context_get_server_info(ctx, get_server_info_callback, data);
+        case SINK_INPUT:
+            switch (data->action) {
+                case LIST:
+                    o = pa_context_get_sink_input_info_list(ctx, list_sink_inputs_callback, data);
+                    break;
+                case MOVE:
+                    break;
+                default:
+                    errorf("Action not supported for sink-input\n");
+                    drain_context(ctx, data);
+                    exit(2);
+            }
             break;
         default:
-            errorf("Unkown action sink\n");
-            drain_context(ctx, data);
-        }
-        break;
-    case SOURCE:
-        switch (data->action) {
-        case LIST:
-            o = pa_context_get_source_info_list(ctx, list_sources_callback, data);
-            break;
-        case SET_DEFAULT:
-            o = pa_context_set_default_source(ctx, data->device_name, default_source_success_callback, data);
-            break;
-        case MUTE:
-        case IS_MUTED:
-        case GET_VOLUME:
-        case ADJUST_VOLUME:
-            o = pa_context_get_server_info(ctx, get_server_info_callback, data);
-            break;
-        default:
-            errorf("Action not supported for source\n");
-            drain_context(ctx, data);
-        }
-        break;
-    case SINK_INPUT:
-        switch (data->action) {
-        case LIST:
-            o = pa_context_get_sink_input_info_list(ctx, list_sink_inputs_callback, data);
-            break;
-        case MOVE:
-            break;
-        default:
-            errorf("Action not supported for sink-input\n");
-            drain_context(ctx, data);
-        }
-        break;
-    default:
-        o = pa_context_get_server_info(ctx, print_server_info_call_callback, data);
+            o = pa_context_get_server_info(ctx, print_server_info_call_callback, data);
     }
 
     pa_operation_unref(o);
@@ -270,27 +273,27 @@ static void sink_info_callback(pa_context *ctx, const pa_sink_info *info, int do
     user_data *data = userdata;
     pa_operation *o;
     switch (data->action) {
-    case MUTE:
-        o = pa_context_set_sink_mute_by_index(ctx, info->index, !info->mute, success_callback, data);
-        break;
-    case ADJUST_VOLUME:
-        o = adjust_sink_volume(ctx, info, data);
-        break;
+        case MUTE:
+            o = pa_context_set_sink_mute_by_index(ctx, info->index, !info->mute, success_callback, data);
+            break;
+        case ADJUST_VOLUME:
+            o = adjust_sink_volume(ctx, info, data);
+            break;
 
-    case IS_MUTED:
-        printf("%d\n", info->mute);
-        drain_context(ctx, userdata);
-        return;
+        case IS_MUTED:
+            printf("%d\n", info->mute);
+            drain_context(ctx, userdata);
+            return;
 
-    case GET_VOLUME:
-        print_sink_volume(ctx, info, data);
-        drain_context(ctx, userdata);
-        return;
+        case GET_VOLUME:
+            print_sink_volume(ctx, info, data);
+            drain_context(ctx, userdata);
+            return;
 
-    default:
-        errorf("Unkown action\n");
-        drain_context(ctx, userdata);
-        exit(1);
+        default:
+            errorf("Unkown action\n");
+            drain_context(ctx, userdata);
+            exit(1);
     }
 
     pa_operation_unref(o);
@@ -310,28 +313,28 @@ static void source_info_callback(pa_context *ctx, const pa_source_info *info, in
         return;
 
     switch (data->action) {
-    case MUTE:
-        o = pa_context_set_source_mute_by_index(ctx, info->index, !info->mute, success_callback, data);
-        break;
+        case MUTE:
+            o = pa_context_set_source_mute_by_index(ctx, info->index, !info->mute, success_callback, data);
+            break;
 
-    case ADJUST_VOLUME:
-        o = adjust_source_volume(ctx, info, data);
-        break;
+        case ADJUST_VOLUME:
+            o = adjust_source_volume(ctx, info, data);
+            break;
 
-    case IS_MUTED:
-	printf("%d\n", info->mute);
-        drain_context(ctx, userdata);
-        return;
+        case IS_MUTED:
+            printf("%d\n", info->mute);
+            drain_context(ctx, userdata);
+            return;
 
-    case GET_VOLUME:
-        print_source_volume(ctx, info);
-        drain_context(ctx, userdata);
-        return;
+        case GET_VOLUME:
+            print_source_volume(ctx, info);
+            drain_context(ctx, userdata);
+            return;
 
-    default:
-        errorf("Unkown action\n");
-        drain_context(ctx, userdata);
-        exit(1);
+        default:
+            errorf("Unkown action\n");
+            drain_context(ctx, userdata);
+            exit(1);
     }
 
     pa_operation_unref(o);
@@ -400,7 +403,19 @@ static void pretty_print_sink_callback(pa_context *ctx, const pa_sink_info *info
     }
 
     float volume = pa_cvolume_max(&info->volume) * 100.0 / PA_VOLUME_NORM;
-    printf("Sink #%u\n\tName: %s\n\tDescription: %s\n\tDriver: %s\n\tVolume: %g%%\n", info->index, info->name, strnull(info->description), strnull(info->driver), roundf(volume));
+
+    printf(
+        "Sink #%u\n"
+        "    Name: %s\n"
+        "    Description: %s\n"
+        "    Driver: %s\n"
+        "    Volume: %g%%\n",
+        info->index,
+        info->name,
+        strnull(info->description),
+        strnull(info->driver),
+        roundf(volume)
+    );
 }
 
 static void pretty_print_source_callback(pa_context *ctx, const pa_source_info *info, int done, void *userdata) {
@@ -451,6 +466,7 @@ static void default_sink_success_callback(pa_context *ctx, int success, void *us
     if (!success) {
         errorf("Failure: %s\n", pa_strerror(pa_context_errno(ctx)));
         drain_context(ctx, userdata);
+        exit(1);
         return;
     }
 
@@ -461,6 +477,7 @@ static void default_source_success_callback(pa_context *ctx, int success, void *
     if (!success) {
         errorf("Failure: %s\n", pa_strerror(pa_context_errno(ctx)));
         drain_context(ctx, userdata);
+        exit(1);
         return;
     }
 
