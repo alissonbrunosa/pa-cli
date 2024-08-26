@@ -403,18 +403,20 @@ static void pretty_print_sink_callback(pa_context *ctx, const pa_sink_info *info
     }
 
     float volume = pa_cvolume_max(&info->volume) * 100.0 / PA_VOLUME_NORM;
+    char *muted = info->mute ? "\033[0;31m[MUTED]\033[0m" : "";
 
     printf(
         "Sink #%u\n"
         "    Name: %s\n"
         "    Description: %s\n"
         "    Driver: %s\n"
-        "    Volume: %g%%\n",
+        "    Volume: %g%% %s\n",
         info->index,
         info->name,
         strnull(info->description),
         strnull(info->driver),
-        roundf(volume)
+        roundf(volume),
+        muted
     );
 }
 
@@ -431,7 +433,21 @@ static void pretty_print_source_callback(pa_context *ctx, const pa_source_info *
     }
 
     float volume = pa_cvolume_max(&info->volume) * 100.0 / PA_VOLUME_NORM;
-    printf("Source #%u\n\tName: %s\n\tDescription: %s\n\tDriver: %s\n\tVolume: %g%%\n", info->index, info->name, strnull(info->description), strnull(info->driver), roundf(volume));
+    char *muted = info->mute ? "\033[0;31m[MUTED]\033[0m" : "";
+
+    printf(
+        "Source #%u\n"
+        "    Name: %s\n"
+        "    Description: %s\n"
+        "    Driver: %s\n"
+        "    Volume: %g%% %s\n",
+        info->index,
+        info->name,
+        strnull(info->description),
+        strnull(info->driver),
+        roundf(volume),
+        muted
+    );
 }
 
 static void context_drain_complete_callback(pa_context *ctx, void *userdata) {
