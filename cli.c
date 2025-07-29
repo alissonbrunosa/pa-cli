@@ -165,6 +165,10 @@ static void list_sources_callback(pa_context *ctx, const pa_source_info *info, i
         return;
     }
 
+    if (info->monitor_of_sink != PA_INVALID_INDEX) {
+        return; // Skip monitor sources
+    }
+
     printf("%-5d\t%-90s\t%s\n", info->index, info->name, info->description);
 }
 
